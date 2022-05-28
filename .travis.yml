@@ -4,65 +4,20 @@ jdk: openjdk8
 install:
   - ./gradlew clean jar
 
+env:
+  - TEST_FOLDER=ui
+  - TEST_FOLDER=service/cart
+  - TEST_FOLDER=service/user
+  - TEST_FOLDER=repository/order
+  - TEST_FOLDER=repository/cart
+  - TEST_FOLDER=repository/product
+  - TEST_FOLDER=repository/user
 
-jobs:
-  include:
-    - stage : test
-      name: "Test ui"
-      install: skip
-      script:
-      - ./gradlew -p $TEST_FOLDER check
-      env:
-      - COVERAGE=0.5
-      - TEST_FOLDER=./monolithic/ui
-    - stage : test
-      name: "Test service/cart"
-      install: skip
-      script:
-      - ./gradlew -p $TEST_FOLDER check
-      env:
-      - COVERAGE=0.5
-      - TEST_FOLDER=./monolithic/service/cart
-    - stage : test
-      name: "Test service/user"
-      install: skip
-      script:
-      - ./gradlew -p $TEST_FOLDER check
-      env:
-      - COVERAGE=0.5
-      - TEST_FOLDER=./monolithic/service/user
-    - stage : test
-      name: "Test repository/order"
-      install: skip
-      script:
-      - ./gradlew -p $TEST_FOLDER check
-      env:
-      - COVERAGE=0.5
-      - TEST_FOLDER=./monolithic/repository/order
-    - stage : test
-      name: "Test repository/cart"
-      install: skip
-      script:
-      - ./gradlew -p $TEST_FOLDER check
-      env:
-      - COVERAGE=0.5
-      - TEST_FOLDER=./monolithic/repository/cart
-    - stage : test
-      name: "Test repository/product"
-      install: skip
-      script:
-      - ./gradlew -p $TEST_FOLDER check
-      env:
-      - COVERAGE=0.5
-      - TEST_FOLDER=./monolithic/repository/product
-    - stage : test
-      name: "Test repository/order"
-      install: skip
-      script:
-      - ./gradlew -p $TEST_FOLDER check
-      env:
-      - COVERAGE=0.3
-      - TEST_FOLDER=./monolithic/repository/order
+script:
+  - if [ "${TEST_FOLDER}" = "repository/order" ]; then export COVERAGE=0.3; fi;
+  - if [ "${TEST_FOLDER}" = "repository/user" ]; then export COVERAGE=0.3; fi;
+  - ./gradlew -p ./monolithic/$TEST_FOLDER check
+
 
 after_success:
   - find . -name jacocoTestReport.csv|xargs cat|awk -F',' '{print $3" "$4" "$5}'
