@@ -1,10 +1,46 @@
-language: python
-install: "pip install -r requirements.txt"
+language: java
+
+services:
+  - docker
+
+jdk:
+  - openjdk8
+  # - openjdk9 # Has long become unavailable... So we have to try JDK 10...
+  - openjdk10
+
+install:
+  - ./gradlew clean jar
+
+env:
+  global:
+    - secure: A/M5M6AzqdWuk72218ck/nrQrm2LDF4WryY1pxfKD3xkmaOchAPwdmweDdKzCL5JTMHlsqcMMAS5ikeD7jpp2GQjlazqZDgttoeRLaBKahmPvjmFbWgYjIk6MvSr83OUsLlO+I0Su+AQEhGTrO6zTduA5n2EdTVYQb/QMHOOC3yO+bh1wAjD60UIynwyEnAAM2jP8H/go26M7jGC+CSEMjQIDAMdgpCcYePhchkMvevfs6ZOnXrBdGTjdUpWFjnHGihwOmGveTmBQA31c3T4tNvSs5IEtsd1bpo3XZUROaYplMPwTZhejGDW2FLgcEQ72FGbMUNLvNc7TPaSfX6U/P8J1wT5XhGR4h7JpORlmt8qJ8umX4VjdfAwwD3ShvRIxXpL48NvXZ8m9RySRFuALqmYj2vGpMn2CGH1V0rV1VICIyyEj3xXH+pHAzn5XH8+G3GicPmIg8U4/Xhqrco+f/VjMBw1EvdhkX4IVB0QJjxDl1KLAR9JpWFXRRnIfljF4TB1eLaoRFkII6QTjE6ZKgGsEnCbjK7BaTEVRFUSuzoBkMG+08hEQ8bCh6rT6nC6RlP+WjEApGs8eiEdceNBfyqNxGqoESqNcZRjh1HQxK5gNaU/EncwwclsSeXTvdhQAkU+J7Yz/JzcfbQBF6siZqhUJ8ZapMazBCG/qyWvLLA=
+  jobs:
+    - TEST_FOLDER=ui
+    - TEST_FOLDER=service/cart
+    - TEST_FOLDER=service/user
+    - TEST_FOLDER=repository/order
+    - TEST_FOLDER=repository/cart
+    - TEST_FOLDER=repository/product
+    - TEST_FOLDER=repository/user
 
 script:
-  # Run ANSIBLE checks
-  # - ANSIBLE0008: Disabled for use of sudo warnings - to address
-  # - ANSIBLE0011: Disabled for all tasks which should be named
-  # - ANSIBLE0012: Disabled (should not change if nothings needs doing) - to address
-  # - ANSIBLE0013: Disabled - few uses of shell commands - to address
-  - find vagrant/provision -name "*.yml" -exec ansible-lint -x ANSIBLE008,ANSIBLE0011,ANSIBLE0012,ANSIBLE0013  {} +
+  - if [ "${TEST_FOLDER}" = "repository/order" ]; then export COVERAGE=0.3; fi;
+  - if [ "${TEST_FOLDER}" = "repository/user" ]; then export COVERAGE=0.3; fi;
+  - echo COVERAGE=${COVERAGE}
+  - ./gradlew -p ./monolithic/${TEST_FOLDER} check
+
+
+after_success:
+  - find . -name jacocoTestReport.csv|xargs cat|awk -F',' '{print $3" "$4" "$5}'
+
+before_deploy:
+  - if [ "${TEST_FOLDER}" = "ui" ]; then ./gradlew -p ./monolithic/ui packageToContainer; fi;
+
+# "The deploy steps are skipped, if the build is broken."
+# https://docs.travis-ci.com/user/job-lifecycle/#deploying-your-code
+deploy:
+  provider: script
+  script: bash ./script/deploy.sh
+  on:
+    branch: master
+    condition: $TEST_FOLDER = ui
